@@ -21,8 +21,8 @@ websocket:
 # Orderflow Engine Settings
 orderflow:
   footprint_window: 50  # Number of price levels to track
-  imbalance_threshold: 3.0  # Buy/Sell ratio for imbalance
-  stacked_imbalance_levels: 3  # Consecutive levels for stacked
+  imbalance_threshold: 1.5  # Buy/Sell ratio for imbalance (1.5 = 3:2 ratio)
+  stacked_imbalance_levels: 2  # Consecutive levels for stacked
   absorption_threshold: 0.7  # Price close vs open for absorption
   volume_spike_multiplier: 1.5  # Volume spike detection
 

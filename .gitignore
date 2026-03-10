@@ -25,6 +25,7 @@ wheels/
 venv/
 ENV/
 env/
+.virtualenv/
 
 # IDE
 .vscode/
@@ -39,15 +40,18 @@ env/
 htmlcov/
 .tox/
 
-# Logs
-logs/*.log
+# Logs - Don't commit log files
+logs/
 *.log
+*.log.*
+logs/*.log.*
 
-# Database
+# Database - Don't commit database files
+data/
+data/*.db
 *.db
 *.sqlite
 *.sqlite3
-data/*.db
 
 # Environment
 .env
@@ -67,4 +71,7 @@ build/
 tmp/
 temp/
 *.tmp
+
+# Crypto bot specific
+crypto_orderflow_bot.egg-info/
 

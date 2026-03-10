@@ -236,7 +236,7 @@ class TradingBot:
             update_bot_state(market_data=market_data, orderflow_metrics=orderflow_metrics)
 
     async def _run_strategy_analysis(self, symbol: str) -> None:
-        """Run complete strategy analysis."""
+        """Run complete strategy analysis with PARALLEL detector execution."""
         self.logger.info(f"Running strategy analysis for {symbol}")
 
         # Get market data
@@ -266,14 +266,6 @@ class TradingBot:
         candle_data = []
         if candles := self.market_data_handler.get_closed_candles(symbol, "1m", 50):
             candle_data = [{"high": c.high, "low": c.low, "close": c.close, "volume": c.volume} for c in candles]
-<<<<<<< Updated upstream
-        
-        zone_data = self.zone_detector.detect_zones_from_candles(candle_data) if candle_data else {}
-        absorption_data = self.absorption_detector.analyze_bar({"price": current_price, "volume": ticker.volume, "delta": delta, "cvd": cvd}) or {}
-        imbalance_data = self.imbalance_detector.analyze_market({"price": current_price, "volume": ticker.volume}) or {}
-        initiation_data = self.initiation_detector.detect_initiation(candle_data) if candle_data else {}
-        
-=======
 
         # Prepare detector inputs
         bar_data = {"price": current_price, "volume": ticker.volume, "delta": delta, "cvd": cvd}
@@ -337,7 +329,6 @@ class TradingBot:
         imbalance_data = imbalance_data or {}
         initiation_data = initiation_data or {}
 
->>>>>>> Stashed changes
         self.logger.info(f"[{symbol}] Zones: near_support={zone_data.get('near_support', False)}, near_resistance={zone_data.get('near_resistance', False)}, "
                        f"Absorption: detected={absorption_data.get('detected', False)}, type={absorption_data.get('type', 'none')}, "
                        f"Imbalance: stacked={imbalance_data.get('stacked', False)}, type={imbalance_data.get('type', 'none')}, "
@@ -347,13 +338,8 @@ class TradingBot:
             "zones": zone_data,
             "absorption": absorption_data,
             "cvd_divergence": {},
-<<<<<<< Updated upstream
-            "imbalance": self.imbalance_detector.analyze_market({"price": current_price, "volume": ticker.volume}) or {},
-            "initiation": self.initiation_detector.detect_initiation(candle_data) if candle_data else {},
-=======
             "imbalance": imbalance_data,
             "initiation": initiation_data,
->>>>>>> Stashed changes
             "volume": {"spike": ticker.volume > 1000000},
         }
 

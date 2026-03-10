@@ -335,6 +335,79 @@ class AbsorptionDetector:
         """
         return self._current_absorption_type
 
+    def analyze_bar(self, bar_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Analyze a bar for absorption patterns.
+
+        This method provides a simplified interface for analyzing bar data
+        when only basic market metrics are available (price, volume, delta).
+
+        Args:
+            bar_data: Dictionary containing:
+                - price: Current price
+                - volume: Total volume
+                - delta: Volume delta (buy - sell)
+                - cvd: Cumulative volume delta (optional)
+                - buy_volume: Buy volume (optional, calculated if not provided)
+                - sell_volume: Sell volume (optional, calculated if not provided)
+                - timestamp: Current timestamp (optional)
+
+        Returns:
+            Dictionary with absorption analysis results.
+        """
+        import time
+        
+        # Extract data from bar_data
+        price = bar_data.get("price", 0)
+        volume = bar_data.get("volume", 0)
+        delta = bar_data.get("delta", 0)
+        
+        # Calculate buy/sell volume from delta if not provided
+        buy_volume = bar_data.get("buy_volume")
+        sell_volume = bar_data.get("sell_volume")
+        
+        if buy_volume is None or sell_volume is None:
+            # Estimate buy/sell volume from delta
+            # delta = buy_volume - sell_volume
+            # volume = buy_volume + sell_volume
+            # Solving: buy_volume = (volume + delta) / 2, sell_volume = (volume - delta) / 2
+            buy_volume = (volume + delta) / 2
+            sell_volume = (volume - delta) / 2
+        
+        # Get timestamp
+        timestamp = bar_data.get("timestamp", int(time.time() * 1000))
+        
+        # For simple bar analysis, use price as all OHLC values
+        # In a real scenario, you'd want proper OHLC data
+        price_open = price
+        price_close = price
+        price_high = price
+        price_low = price
+        
+        # Run absorption detection
+        absorption_result = self.detect_absorption(
+            buy_volume=buy_volume,
+            sell_volume=sell_volume,
+            price_open=price_open,
+            price_close=price_close,
+            price_high=price_high,
+            price_low=price_low,
+            timestamp=timestamp,
+        )
+        
+        # Return formatted result
+        return {
+            "detected": absorption_result.absorption_detected,
+            "type": absorption_result.absorption_type,
+            "strength": absorption_result.strength,
+            "price": absorption_result.price,
+            "volume": absorption_result.volume,
+            "delta": absorption_result.delta,
+            "buy_volume": buy_volume,
+            "sell_volume": sell_volume,
+            "valid_signal": self.is_absorption_valid(absorption_result),
+        }
+
     def get_consecutive_absorption_count(self) -> int:
         """
         Get count of consecutive absorption signals.

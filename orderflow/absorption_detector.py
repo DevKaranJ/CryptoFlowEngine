@@ -351,6 +351,7 @@ class AbsorptionDetector:
                 - buy_volume: Buy volume (optional, calculated if not provided)
                 - sell_volume: Sell volume (optional, calculated if not provided)
                 - timestamp: Current timestamp (optional)
+                - open, high, low, close: OHLC data (optional, uses price if not provided)
 
         Returns:
             Dictionary with absorption analysis results.
@@ -377,12 +378,22 @@ class AbsorptionDetector:
         # Get timestamp
         timestamp = bar_data.get("timestamp", int(time.time() * 1000))
         
-        # For simple bar analysis, use price as all OHLC values
-        # In a real scenario, you'd want proper OHLC data
-        price_open = price
-        price_close = price
-        price_high = price
-        price_low = price
+        # Get OHLC data if available, otherwise estimate from price
+        price_open = bar_data.get("open", price)
+        price_close = bar_data.get("close", price)
+        price_high = bar_data.get("high", price * 1.001 if price else 0)  # Add small buffer
+        price_low = bar_data.get("low", price * 0.999 if price else 0)
+        
+        # If OHLC values are all the same (no variation), estimate a reasonable range
+        # based on volume and delta (market microstructure)
+        if price_high == price_low or price_high == 0:
+            # Estimate range as percentage of price based on volume
+            # Higher volume = larger expected range
+            volume_factor = min(1.0, volume / 1000000)  # Cap at 1%
+            price_range_pct = 0.001 + (volume_factor * 0.002)  # 0.1% to 0.3%
+            price_range = price * price_range_pct
+            price_high = price + price_range
+            price_low = price - price_range
         
         # Run absorption detection
         absorption_result = self.detect_absorption(

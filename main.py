@@ -329,13 +329,22 @@ class TradingBot:
         imbalance_data = imbalance_data or {}
         initiation_data = initiation_data or {}
 
-        self.logger.info(f"[{symbol}] Zones: near_support={zone_data.get('near_support', False)}, near_resistance={zone_data.get('near_resistance', False)}, "
+        # Check if price is near support/resistance zones
+        support_zones = zone_data.get("support_zones", [])
+        resistance_zones = zone_data.get("resistance_zones", [])
+        
+        near_support = self.zone_detector.is_near_zone(current_price, support_zones) if support_zones else False
+        near_resistance = self.zone_detector.is_near_zone(current_price, resistance_zones) if resistance_zones else False
+        
+        self.logger.info(f"[{symbol}] Zones: near_support={near_support}, near_resistance={near_resistance}, "
                        f"Absorption: detected={absorption_data.get('detected', False)}, type={absorption_data.get('type', 'none')}, "
                        f"Imbalance: stacked={imbalance_data.get('stacked', False)}, type={imbalance_data.get('type', 'none')}, "
                        f"Initiation: detected={initiation_data.get('detected', False)}")
 
         orderflow_data = {
             "zones": zone_data,
+            "near_support": near_support,
+            "near_resistance": near_resistance,
             "absorption": absorption_data,
             "cvd_divergence": {},
             "imbalance": imbalance_data,

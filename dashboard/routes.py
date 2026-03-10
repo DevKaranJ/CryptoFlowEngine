@@ -478,6 +478,46 @@ async def get_market_data():
     }
 
 
+@router.get("/bot/analysis/{symbol}")
+async def get_symbol_analysis(symbol: str):
+    """
+    Get detailed analysis for a specific symbol.
+
+    Returns:
+        Complete analysis data for the symbol.
+    """
+    simulator = get_simulator()
+    pnl_tracker = get_pnl_tracker()
+    db = get_db_manager()
+    
+    # Get orderflow data
+    orderflow_metrics = _bot_state.get("orderflow_metrics", {}).get(symbol, {})
+    market_data = _bot_state.get("market_data", {}).get(symbol, {})
+    
+    # Get recent signals for this symbol
+    signals = db.get_signals_by_symbol(symbol, 10)
+    
+    return {
+        "symbol": symbol,
+        "market_data": market_data,
+        "orderflow": {
+            "cvd": orderflow_metrics.get("cvd", 0),
+            "delta": orderflow_metrics.get("delta", 0),
+        },
+        "recent_signals": [
+            {
+                "id": s.signal_id,
+                "direction": s.direction,
+                "entry_price": s.entry_price,
+                "confidence": s.confidence,
+                "status": s.status,
+                "timestamp": s.timestamp,
+            }
+            for s in signals
+        ],
+    }
+
+
 @router.get("/bot/logs")
 async def get_bot_logs(limit: int = 50):
     """

@@ -237,19 +237,21 @@ class TradingBot:
 
     async def _run_strategy_analysis(self, symbol: str) -> None:
         """Run complete strategy analysis."""
-        self.logger.debug(f"Running strategy analysis for {symbol}")
+        self.logger.info(f"Running strategy analysis for {symbol}")
 
         # Get market data
         ticker = self.market_data_handler.get_ticker(symbol)
         if not ticker:
+            self.logger.warning(f"No ticker data for {symbol}")
             return
 
         current_price = ticker.last_price
 
         # Get orderflow data
-        footprint_bar = self.footprint_engine.get_current_bar()
         cvd = self.cvd_engine.get_current_cvd()
         delta = self.delta_engine.get_current_delta().delta
+
+        self.logger.info(f"[{symbol}] Price: {current_price}, CVD: {cvd}, Delta: {delta}, Volume: {ticker.volume}")
 
         # Prepare market data
         market_data = {
@@ -260,13 +262,28 @@ class TradingBot:
             "volume": ticker.volume,
         }
 
-        # Prepare orderflow data
+        # Prepare orderflow data with actual analysis results
+        candle_data = []
+        if candles := self.market_data_handler.get_closed_candles(symbol, "1m", 50):
+            candle_data = [{"high": c.high, "low": c.low, "close": c.close, "volume": c.volume} for c in candles]
+        
+        zone_data = self.zone_detector.detect_zones_from_candles(candle_data) if candle_data else {}
+        absorption_data = self.absorption_detector.analyze_bar({"price": current_price, "volume": ticker.volume, "delta": delta, "cvd": cvd}) or {}
+        imbalance_data = self.imbalance_detector.analyze_market({"price": current_price, "volume": ticker.volume}) or {}
+        initiation_data = self.initiation_detector.detect_initiation(candle_data) if candle_data else {}
+        
+        self.logger.info(f"[{symbol}] Zones: near_support={zone_data.get('near_support', False)}, near_resistance={zone_data.get('near_resistance', False)}, "
+                       f"Absorption: detected={absorption_data.get('detected', False)}, type={absorption_data.get('type', 'none')}, "
+                       f"Imbalance: stacked={imbalance_data.get('stacked', False)}, type={imbalance_data.get('type', 'none')}, "
+                       f"Initiation: detected={initiation_data.get('detected', False)}")
+        
         orderflow_data = {
-            "zones": {},
-            "absorption": {},
+            "zones": zone_data or {},
+            "absorption": self.absorption_detector.analyze_bar({"price": current_price, "volume": ticker.volume, "delta": delta, "cvd": cvd}) or {},
             "cvd_divergence": {},
-            "imbalance": {},
-            "volume": {},
+            "imbalance": self.imbalance_detector.analyze_market({"price": current_price, "volume": ticker.volume}) or {},
+            "initiation": self.initiation_detector.detect_initiation(candle_data) if candle_data else {},
+            "volume": {"spike": ticker.volume > 1000000},
         }
 
         # Run analysis

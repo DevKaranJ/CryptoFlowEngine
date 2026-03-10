@@ -3,11 +3,18 @@ WebSocket client for connecting to cryptocurrency exchanges.
 
 This module provides async WebSocket connections to Binance and Bybit
 for real-time market data streaming.
+
+Rate Limiting:
+- WebSocket connections: 5 messages/second max
+- Max 1024 streams per connection
+- 300 connections per 5 minutes per IP
 """
 
 import asyncio
 import json
+import time
 from abc import ABC, abstractmethod
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable
@@ -35,6 +42,80 @@ class StreamConfig:
     symbol: str
     interval: str
     stream_type: str  # trade, ticker, kline, depth
+
+
+class RateLimitMonitor:
+    """
+    Monitor WebSocket request weight to prevent rate limit bans.
+    
+    Binance WebSocket API has these limits:
+    - 5 incoming messages per second
+    - Max 1024 streams per connection
+    - 300 connections per 5 minutes per IP
+    
+    Note: For public streams (trades, tickers, klines), there are NO rate limits
+    on incoming data. Rate limits only apply to:
+    - API requests (not WebSocket)
+    - User data streams
+    - Trading operations
+    
+    This monitor is kept for future API request tracking if needed.
+    """
+    
+    def __init__(self, warning_threshold: float = 0.8):
+        """
+        Initialize rate limit monitor.
+        
+        Args:
+            warning_threshold: Percentage of limit to trigger warnings (0.0-1.0)
+        """
+        self.warning_threshold = warning_threshold
+        self._request_times: deque = deque(maxlen=1000)
+        self._minute_requests: dict[int, int] = {}
+        self._last_cleanup = time.time()
+        
+    def record_request(self, weight: int = 1) -> None:
+        """Record an API request with its weight."""
+        current_time = time.time()
+        current_minute = int(current_time // 60)
+        
+        # Cleanup old entries periodically
+        if current_time - self._last_cleanup > 60:
+            self._minute_requests = {
+                k: v for k, v in self._minute_requests.items()
+                if k >= current_minute - 1
+            }
+            self._last_cleanup = current_time
+        
+        # Record request
+        self._minute_requests[current_minute] = \
+            self._minute_requests.get(current_minute, 0) + weight
+        
+        # Log current usage
+        current_usage = self._minute_requests.get(current_minute, 0)
+        if current_usage >= 6000 * self.warning_threshold:
+            logger.warning(
+                f"Rate limit warning: {current_usage}/6000 requests this minute "
+                f"({current_usage/60:.1f}/sec)"
+            )
+    
+    def get_current_usage(self) -> dict[str, Any]:
+        """Get current rate limit usage statistics."""
+        current_minute = int(time.time() // 60)
+        current_usage = self._minute_requests.get(current_minute, 0)
+        
+        return {
+            "requests_this_minute": current_usage,
+            "limit": 6000,
+            "usage_percent": (current_usage / 6000) * 100,
+            "requests_per_second": current_usage / 60,
+        }
+    
+    def is_rate_limited(self) -> bool:
+        """Check if we're currently rate limited."""
+        current_minute = int(time.time() // 60)
+        current_usage = self._minute_requests.get(current_minute, 0)
+        return current_usage >= 6000
 
 
 class WebSocketClient(ABC):

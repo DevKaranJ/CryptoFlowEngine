@@ -31,7 +31,7 @@ strategy:
   zone_lookback_candles: 100
   zone_strength_threshold: 2
   min_confidence: 50
-  strong_confidence: 70
+  strong_confidence: 60
   pullback_candles: 3  # Max candles to wait for pullback
 
 # Risk Management

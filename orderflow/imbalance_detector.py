@@ -301,15 +301,6 @@ class ImbalanceDetector:
         """
         return list(self._imbalance_history)[-count:]
 
-    def get_current_imbalance_type(self) -> str:
-        """
-        Get the current imbalance state.
-
-        Returns:
-            Current imbalance type: "buy", "sell", or "balanced".
-        """
-        return self._current_imbalance_type
-
     def get_stacked_imbalance_count(self) -> int:
         """
         Get count of stacked imbalances in current sequence.
@@ -318,6 +309,156 @@ class ImbalanceDetector:
             Number of consecutive stacked imbalances.
         """
         return self._stacked_imbalance_count
+
+    def analyze_market(self, market_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Analyze market data for imbalances.
+
+        This method provides a standardized interface for the websocket
+        dispatcher to call during market analysis.
+
+        Args:
+            market_data: Dictionary containing:
+                - price: Current price
+                - volume: Total volume
+                - buy_volume: Buy volume (optional)
+                - sell_volume: Sell volume (optional)
+                - delta: Volume delta (optional)
+                - cvd: Cumulative volume delta (optional)
+                - levels: Footprint levels dictionary (optional)
+
+        Returns:
+            Dictionary with imbalance analysis results including:
+                - detected: Whether imbalance was detected
+                - type: "buy", "sell", or "balanced"
+                - stacked: Whether stacked imbalance detected
+                - ratio: Imbalance ratio
+                - buy_volume: Total buy volume
+                - sell_volume: Total sell volume
+        """
+        price = market_data.get("price", 0)
+        volume = market_data.get("volume", 0)
+        
+        # Get or estimate buy/sell volumes
+        buy_volume = market_data.get("buy_volume")
+        sell_volume = market_data.get("sell_volume")
+        delta = market_data.get("delta", 0)
+        
+        if buy_volume is None or sell_volume is None:
+            # Estimate from delta if not provided
+            # delta = buy_volume - sell_volume
+            # volume = buy_volume + sell_volume
+            # Solving: buy_volume = (volume + delta) / 2, sell_volume = (volume - delta) / 2
+            buy_volume = (volume + delta) / 2
+            sell_volume = (volume - delta) / 2
+        
+        # Get footprint levels if provided
+        levels = market_data.get("levels", {})
+        
+        # Run time-based imbalance detection
+        time_imbalance = self.detect_time_imbalance(buy_volume, sell_volume)
+        
+        # Run footprint level analysis if levels provided
+        level_analysis = {}
+        if levels:
+            level_analysis = self.analyze_footprint_levels(levels)
+        
+        # Determine overall imbalance type
+        imbalance_type = "balanced"
+        if time_imbalance.get("imbalance"):
+            imbalance_type = time_imbalance.get("type", "balanced")
+        elif level_analysis.get("stacked_buy"):
+            imbalance_type = "buy"
+        elif level_analysis.get("stacked_sell"):
+            imbalance_type = "sell"
+        
+        # Determine if stacked
+        is_stacked = level_analysis.get("stacked_buy", False) or level_analysis.get("stacked_sell", False)
+        
+        # Calculate overall ratio
+        ratio = time_imbalance.get("ratio", 1.0)
+        
+        result = {
+            "detected": time_imbalance.get("imbalance", False) or is_stacked,
+            "type": imbalance_type,
+            "stacked": is_stacked,
+            "ratio": ratio,
+            "buy_volume": buy_volume,
+            "sell_volume": sell_volume,
+            "total_volume": volume,
+            "buy_percent": time_imbalance.get("buy_percent", 50),
+            "stacked_buy": level_analysis.get("stacked_buy", False),
+            "stacked_sell": level_analysis.get("stacked_sell", False),
+            "buy_imbalance_count": level_analysis.get("total_buy_imbalances", 0),
+            "sell_imbalance_count": level_analysis.get("total_sell_imbalances", 0),
+        }
+        
+        # Update state
+        if is_stacked:
+            self._current_imbalance_type = imbalance_type
+            self._stacked_imbalance_count += 1
+        
+        # Record event
+        self.record_imbalance_event(result)
+        
+        return result
+
+    def analyze_bar(self, bar_data: dict[str, Any]) -> dict[str, Any]:
+        """
+        Analyze a bar for imbalances.
+
+        This method provides a simplified interface for analyzing bar data
+        when only basic market metrics are available.
+
+        Args:
+            bar_data: Dictionary containing:
+                - price: Current price
+                - volume: Total volume
+                - delta: Volume delta (optional)
+                - cvd: Cumulative volume delta (optional)
+                - buy_volume: Buy volume (optional)
+                - sell_volume: Sell volume (optional)
+                - timestamp: Current timestamp (optional)
+
+        Returns:
+            Dictionary with imbalance analysis results.
+        """
+        import time
+        
+        # Extract data from bar_data
+        price = bar_data.get("price", 0)
+        volume = bar_data.get("volume", 0)
+        delta = bar_data.get("delta", 0)
+        
+        # Get or estimate buy/sell volumes
+        buy_volume = bar_data.get("buy_volume")
+        sell_volume = bar_data.get("sell_volume")
+        
+        if buy_volume is None or sell_volume is None:
+            # Estimate from delta if not provided
+            buy_volume = (volume + delta) / 2
+            sell_volume = (volume - delta) / 2
+        
+        # Run time-based imbalance detection
+        time_imbalance = self.detect_time_imbalance(buy_volume, sell_volume)
+        
+        # Get strength
+        imbalance_levels = []
+        if time_imbalance.get("imbalance"):
+            imbalance_levels = [{"ratio": time_imbalance.get("ratio", 1.0), "volume": volume}]
+        
+        strength = self.get_imbalance_strength(imbalance_levels)
+        
+        return {
+            "detected": time_imbalance.get("imbalance", False),
+            "type": time_imbalance.get("type", "balanced"),
+            "ratio": time_imbalance.get("ratio", 1.0),
+            "buy_volume": buy_volume,
+            "sell_volume": sell_volume,
+            "total_volume": volume,
+            "buy_percent": time_imbalance.get("buy_percent", 50),
+            "strength": strength,
+        }
 
     def reset(self) -> None:
         """Reset the imbalance detector state."""

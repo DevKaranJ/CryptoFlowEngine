@@ -360,6 +360,60 @@ class InitiationDetector:
         """
         return self._last_initiation
 
+    def detect_initiation_from_candles(
+        self,
+        candles: list[dict[str, Any]],
+        imbalance_type: str = "none"
+    ) -> dict[str, Any]:
+        """
+        Detect initiation from a list of candles.
+
+        This method provides a simplified interface for the websocket
+        dispatcher to call during market analysis.
+
+        Args:
+            candles: List of candle dictionaries with high, low, close, volume, open.
+            imbalance_type: Type of imbalance detected ("buy", "sell", "none").
+
+        Returns:
+            Dictionary with initiation detection results:
+                - detected: Whether initiation was detected
+                - direction: "bullish", "bearish", or "none"
+                - price: Current price
+                - strength: Signal strength (0-1)
+                - confirmation: Whether signal is confirmed
+        """
+        if not candles or len(candles) < 2:
+            return {
+                "detected": False,
+                "direction": "none",
+                "candle_index": 0,
+                "price": 0,
+                "strength": 0,
+                "confirmation": False,
+            }
+
+        # Get current and previous candles from the list
+        current_candle = candles[-1]
+        previous_candle = candles[-2]
+
+        # Call the main detection method
+        result = self.detect_initiation(
+            current_candle=current_candle,
+            previous_candle=previous_candle,
+            imbalance_type=imbalance_type
+        )
+
+        # Convert dataclass to dictionary
+        return {
+            "detected": result.detected,
+            "direction": result.direction,
+            "candle_index": result.candle_index,
+            "price": result.price,
+            "strength": result.strength,
+            "confirmation": result.confirmation,
+        }
+
     def reset(self) -> None:
         """Reset the initiation detector."""
         self._last_initiation = None

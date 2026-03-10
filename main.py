@@ -270,7 +270,7 @@ class TradingBot:
         zone_data = self.zone_detector.detect_zones_from_candles(candle_data) if candle_data else {}
         absorption_data = self.absorption_detector.analyze_bar({"price": current_price, "volume": ticker.volume, "delta": delta, "cvd": cvd}) or {}
         imbalance_data = self.imbalance_detector.analyze_market({"price": current_price, "volume": ticker.volume}) or {}
-        initiation_data = self.initiation_detector.detect_initiation(candle_data) if candle_data else {}
+        initiation_data = self.initiation_detector.detect_initiation_from_candles(candle_data) if candle_data else {}
         
         self.logger.info(f"[{symbol}] Zones: near_support={zone_data.get('near_support', False)}, near_resistance={zone_data.get('near_resistance', False)}, "
                        f"Absorption: detected={absorption_data.get('detected', False)}, type={absorption_data.get('type', 'none')}, "
@@ -282,7 +282,7 @@ class TradingBot:
             "absorption": self.absorption_detector.analyze_bar({"price": current_price, "volume": ticker.volume, "delta": delta, "cvd": cvd}) or {},
             "cvd_divergence": {},
             "imbalance": self.imbalance_detector.analyze_market({"price": current_price, "volume": ticker.volume}) or {},
-            "initiation": self.initiation_detector.detect_initiation(candle_data) if candle_data else {},
+            "initiation": self.initiation_detector.detect_initiation_from_candles(candle_data) if candle_data else {},
             "volume": {"spike": ticker.volume > 1000000},
         }
 

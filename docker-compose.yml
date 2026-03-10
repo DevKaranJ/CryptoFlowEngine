@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  cryptobot:
+    build: .
+    container_name: crypto-orderflow-bot
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - CRYPTOBOT_LOGGING__LEVEL=INFO
+      - CRYPTOBOT_EXCHANGE__NAME=binance
+      - CRYPTOBOT_EXCHANGE__SYMBOLS=["BTCUSDT","ETHUSDT"]
+      - CRYPTOBOT_PAPER_TRADING__ENABLED=true
+      - CRYPTOBOT_PAPER_TRADING__INITIAL_BALANCE=10000
+    restart: unless-stopped
+
+  # Optional: Dashboard only mode (without trading)
+  dashboard:
+    build: .
+    container_name: crypto-bot-dashboard
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/app/data
+    command: python -c "
+      from dashboard import create_app, set_dependencies
+      from database import DatabaseManager
+      from paper_trading import PaperTradingSimulator, PnLTracker
+      
+      db = DatabaseManager()
+      sim = PaperTradingSimulator(db)
+      pnl = PnLTracker()
+      
+      set_dependencies(sim, db, pnl)
+      app = create_app()
+      import uvicorn
+      uvicorn.run(app, host='0.0.0.0', port=8000)
+    "
+    restart: unless-stopped
+

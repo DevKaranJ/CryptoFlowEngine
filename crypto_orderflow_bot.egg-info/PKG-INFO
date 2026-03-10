@@ -1,0 +1,150 @@
+Metadata-Version: 2.4
+Name: crypto-orderflow-bot
+Version: 0.1.0
+Summary: Local crypto order-flow trading signal platform
+Author-email: Pradeep Joshi <pradeep@example.com>
+License: MIT
+Keywords: trading,crypto,orderflow,trading-bot
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Financial and Insurance Industry
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: websockets>=12.0
+Requires-Dist: pydantic>=2.5.0
+Requires-Dist: pydantic-settings>=2.1.0
+Requires-Dist: numpy>=1.26.0
+Requires-Dist: pandas>=2.1.0
+Requires-Dist: sqlalchemy>=2.0.0
+Requires-Dist: fastapi>=0.109.0
+Requires-Dist: uvicorn>=0.27.0
+Requires-Dist: pyyaml>=6.0.1
+Requires-Dist: python-dotenv>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.8.0; extra == "dev"
+
+# Crypto Order-Flow Trading Bot
+
+A professional-grade local crypto order-flow trading signal platform written in Python. Designed for real-time market analysis using WebSocket data and advanced order-flow strategies.
+
+## Features
+
+- **Real-time WebSocket Data**: Connect to Binance and Bybit exchanges
+- **Orderflow Engine**: Delta, CVD, Imbalance, Absorption, Liquidity detection
+- **Strategy Engine**: Zone detection, Initiation, Pullback confirmation
+- **AI Signal Explainer**: Human-readable explanations (NOT signal generation)
+- **Paper Trading**: Virtual trading with PnL tracking
+- **Dashboard**: FastAPI-based web interface
+- **Clean Architecture**: Modular, typed, documented, and testable
+
+## Architecture
+
+```
+trading_bot/
+├── core/              # WebSocket, market data handling
+├── orderflow/         # Footprint, Delta, CVD, Imbalance, Absorption
+├── strategy/          # Zone, Initiation, Pullback, Signal Builder
+├── ai/               # Signal Explainer (NOT signal generation)
+├── paper_trading/    # Simulator, PnL Tracker
+├── database/         # SQLAlchemy models
+├── dashboard/        # FastAPI server
+├── config/           # Configuration
+└── main.py           # Entry point
+```
+
+## Signal Workflow
+
+```
+WebSocket Data → Orderflow Engine → Strategy Engine → Signal Generation → AI Explanation → User Approval → Paper Trade → Logging
+```
+
+## Installation
+
+### Prerequisites
+
+- Python 3.11+
+- pip or poetry
+
+### Install Dependencies
+
+```bash
+pip install -e .
+```
+
+Or with Docker:
+
+```bash
+docker-compose up -d
+```
+
+## Configuration
+
+Edit `config/settings.yaml` to customize:
+
+- Exchange settings (Binance/Bybit)
+- Symbols and intervals
+- Orderflow parameters
+- Risk management
+- Paper trading settings
+
+## Usage
+
+### Running the Bot
+
+```bash
+python main.py
+```
+
+### Running with Docker
+
+```bash
+docker-compose up -d
+```
+
+### Dashboard
+
+Access the dashboard at `http://localhost:8000`
+
+API documentation: `http://localhost:8000/docs`
+
+## Strategy
+
+The bot implements an order-flow reversal strategy:
+
+1. **Zone Detection**: VAH, VAL, POC, swing highs/lows
+2. **Absorption**: Aggressive side fails to move price
+3. **CVD Divergence**: Delta/CVD diverges from price
+4. **Stacked Imbalance**: Multiple levels with same imbalance
+5. **Initiation Candle**: First strong candle after absorption
+6. **Pullback**: Wait for retest before entry
+
+## Signal Confidence Scoring
+
+- Zone confluence: +25 points
+- Absorption: +20 points
+- CVD divergence: +20 points
+- Stacked imbalance: +20 points
+- Volume spike: +15 points
+
+**Total**: 100 points
+- >70 = Strong trade
+- 50-70 = Medium
+- <50 = Ignore
+
+## Paper Trading
+
+Even if you reject a trade signal, the bot executes a paper trade internally to build a dataset for strategy evaluation.
+
+## Disclaimer
+
+This is NOT financial advice. Always do your own research before trading. Use at your own risk.
+
+## License
+
+MIT License
+

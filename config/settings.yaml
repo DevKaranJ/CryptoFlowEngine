@@ -1,0 +1,69 @@
+# Crypto Trading Bot Configuration
+
+# Exchange Settings
+exchange:
+  name: "binance"  # binance or bybit
+  testnet: false
+  symbols:
+    - "BTCUSDT"
+  intervals:
+    - "1m"
+    - "5m"
+    - "15m"
+
+# WebSocket Settings
+websocket:
+  reconnect_delay: 5
+  max_reconnect_attempts: 10
+  ping_interval: 20  # Binance sends ping every 20 seconds
+  ping_timeout: 30   # Must respond within 1 minute (set to 30s for safety margin)
+
+# Orderflow Engine Settings
+orderflow:
+  footprint_window: 50  # Number of price levels to track
+  imbalance_threshold: 3.0  # Buy/Sell ratio for imbalance
+  stacked_imbalance_levels: 3  # Consecutive levels for stacked
+  absorption_threshold: 0.7  # Price close vs open for absorption
+  volume_spike_multiplier: 1.5  # Volume spike detection
+
+# Strategy Settings
+strategy:
+  zone_lookback_candles: 100
+  zone_strength_threshold: 2
+  min_confidence: 50
+  strong_confidence: 70
+  pullback_candles: 3  # Max candles to wait for pullback
+
+# Risk Management
+risk:
+  max_position_size: 0.1  # Max % of balance per trade
+  default_risk_percent: 1.0  # Risk per trade in %
+  min_risk_reward: 2.0  # Minimum R:R ratio
+  max_daily_trades: 10
+
+# Paper Trading
+paper_trading:
+  enabled: true
+  initial_balance: 10000
+  commission: 0.001  # 0.1%
+
+# Database
+database:
+  path: "data/trading_bot.db"
+  backup_enabled: true
+  backup_interval: 3600  # seconds
+
+# Dashboard
+dashboard:
+  host: "127.0.0.1"
+  port: 8000
+  reload: false
+
+# Logging
+logging:
+  level: "DEBUG"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+  file: "logs/trading_bot.log"
+  max_bytes: 10485760  # 10MB
+  backup_count: 5
+
